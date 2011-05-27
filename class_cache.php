@@ -304,7 +304,7 @@
     {
        if($this->exists($key))
         {
-            if($this->get_time($key) !== 0 || $this->get_time($key) == 0 && (bool) $del_zero == 1)
+            if($this->get_time($key) !== 0 || ($this->get_time($key) == 0 && (bool) $del_zero === true))
             {
                 unlink($this->cache_dir . "/{$key}." . $this->cache_extension);
                 unlink($this->cache_dir . "/{$key}" . $this->cache_prefix . "." . $this->cache_extension);
