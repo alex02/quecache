@@ -1,0 +1,34 @@
+/******************************************************************\
+************************* Que Cache 1.1.7 **************************
+* Added new two functions cache::geteach and cache::cuteach        *
+* Fixed plugin::status activating plugins                          *
+* Improved example page                                            *
+* Cleaned code and fixed functions get and cut each                *
+* Fixed functions that gain errors when using set_error_handler    *
+\******************************************************************/
+
+/******************************************************************\
+************************* Que Cache 1.1.6 **************************
+* Plugins class has added constget in them instead of old values   *
+* Cleaned code and removed duplicate vars for plugins              *
+* Added === for function plugin_check()                            *
+* Edited mkdir() for adding correct 0770 permissions               *
+* Added correct dir for plugin_check() from 1.1.5                  *
+* Added test file to check system requirements                     *
+* Improved security for cache and plugins folders via .htaccess    *
+\******************************************************************/
+
+/******************************************************************\
+************************* Que Cache 1.1.5 **************************
+* Function cache::constget added                                   *
+* Function cache::output deprecated                                *
+* Added return true/false for function plugin_init                 *
+* Added return better array for functions plugin_check and asarray *
+* Added cache::exists check for function cache::get_time           *
+* Added integer return for cache::get_time                         *
+* Better if checks for cache::multiput                             *
+* Changed require to require_once in cache::plugin_init            *
+* Removes function __destruct() for now                            *
+* Fixed bug returning constants in plugins (Bug #3289024)          *
+* Fixed bug turning off plugins after using (Bug #3288970)         *
+\******************************************************************/
