@@ -514,9 +514,9 @@
        */
       function geteach($key_name)
       {
-          if(preg_match("/[" . parse_regex($this->each_syntax) . "]+/", $this->get($key_name)))
+          if(preg_match("/[" . $this->parse_regex($this->each_syntax) . "]+/", $this->get($key_name)))
           {
-              $result = preg_split("/[" . parse_regex($this->each_syntax) . "]+/", $this->get($key_name), -1, PREG_SPLIT_NO_EMPTY);
+              $result = preg_split("/[" . $this->parse_regex($this->each_syntax) . "]+/", $this->get($key_name), -1, PREG_SPLIT_NO_EMPTY);
               for($i = 0;$i < sizeof($result);$i++)
               {
                   if($i % 2 == 0)
@@ -844,7 +844,7 @@
         return;
      }
 
-    function parse_regex($string, $spec_symbol = '~', $type = '%s')
+    private function parse_regex($string, $spec_symbol = '~', $type = '%s')
     {
 
         $string_array = array();
