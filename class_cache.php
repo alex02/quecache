@@ -73,7 +73,7 @@
     *
     * @var string
     */
-    private $cache_plugins_dir = './plugins/';
+    private $cache_plugins_dir = './plugins';
     
     /**
     * Plugin prefix.
@@ -99,11 +99,45 @@
     
     private $qc_special_chars = array('#DOT#', '#ALL#', '#SYMB1#', '#SYMB2#', '#SYMB3#', '#SYMB4#', '#SYMB5#', '#SYMB6#', '#SYMB7#', '#SYMB8#', '#SYMB9#', '#SYMB10#', '#SYMB11#', '#SYMB12#', '#SYMB13#', '#SYMB14#', '#SYMB15#', '#SYMB16#', '#SYMB17#', '#SYMB18#', '#SYMB19#', '#SYMB20#', '#SYMB21#', '#SYMB22#');
 
-    private $new_line = '\n';
+    /**
+     * Please don't change " to ' for this new_line
+     *
+     */
+    private $new_line = "\n";
     
+    /**
+     * Setup custom sytax for each cache cut.
+     * Better not change this.Use only %s.If you want
+     * to save other type of information use other (like %d),
+     * but by default %s is good.Use it only twice here.
+     * Use this wisely.
+     *
+     */
     private $each_syntax = '{%s}:{%s}';
     
+    private $default_syntax_type = '%s';
+    
+    /**
+     * The blank parameter for null array keys or values
+     *
+     */
     private $blank = 'blank';
+
+    /**
+    * Really simple function to get
+    * cache class constants in plugins
+    *
+    * @param string $key
+    *
+    */
+    protected function constget($key)
+    {
+        if(isset($this->$key))
+        {
+            return $this->$key;
+        }
+        return;
+    }
 
     /*
      * Check if cache file is in place,
@@ -129,23 +163,6 @@
         }
         return false;  
     }
-    
-   /**
-    * Really simple function to get
-    * cache class constants in plugins
-    *
-    * @param string $key
-    *
-    */
-    protected function constget($key)
-    {
-        if(isset($this->$key))
-        {
-            return $this->$key;
-        }
-        return;
-    }
-
 
     /*
      * Saves values in cache file.
@@ -164,7 +181,7 @@
     {
         /**
          * Check for directory, if not try to create it
-         * Setup correct permissions, too.
+         * Setup correct permissions, too (0770 +).
          *
          */
         if(!is_dir($this->cache_dir))
@@ -269,7 +286,7 @@
             $cache_output = file_get_contents($this->cache_dir . "/{$key}." . $this->cache_extension);
             $cache_output = str_replace($this->cache_default, '', $cache_output);
             $cache_output = preg_replace('/' . $this->new_line . '/', '', $cache_output, 1);
-          
+            
             return $cache_output;
         }
         return;
@@ -376,7 +393,7 @@
         }
         
         /**
-         * If merged succesfully => return
+         * If merged succesfully then return
          */
         if($this->put($merge_key, $array_imp, $timer) && $this->put($merge_key . $this->merged_prefix, $array_imp_merge, $timer))
         {
@@ -844,11 +861,12 @@
         return;
      }
 
-    private function parse_regex($string, $spec_symbol = '~', $type = '%s')
+    private function parse_regex($string, $spec_symbol = '~', &$type = '%s')
     {
 
-        $string_array = array();
         $str = '';
+        $type = $this->default_syntax_type;
+        $string_array = array();
 
         for($i = 0;$i < strlen($string);$i++)
         {
@@ -921,7 +939,7 @@
       */
       public function plugin_setup($name)
       {
-          $plugin = parent::constget('cache_plugins_dir') . $name . '.' . parent::constget('cache_extension');
+          $plugin = parent::constget('cache_plugins_dir') . '/' . $name . '.' . parent::constget('cache_extension');
           if($this->put('_' . parent::constget('cache_plugins_prefix') . '__' . $name, 1, -time()))
           {
               return true;
@@ -994,9 +1012,9 @@
       public function plugin_exists($name)
       {
       
-          if(file_exists(parent::constget('cache_plugins_dir') . $name . '.' . parent::constget('cache_extension')))
+          if(file_exists(parent::constget('cache_plugins_dir') . '/' . $name . '.' . parent::constget('cache_extension')))
           {
-              $plugin_content = file_get_contents(parent::constget('cache_plugins_dir') . $name . '.' . parent::constget('cache_extension'));
+              $plugin_content = file_get_contents(parent::constget('cache_plugins_dir') . '/' . $name . '.' . parent::constget('cache_extension'));
               if(preg_match('/\s?\s?\s?if\(!class_exists\(\'(cache)\'\)\)\s?\s?\s?\{?\s?\s?\s?\s?\s?\s?\s?(exit|die)?(\((.*)\))?\;?\s?\s?\s?\}?/', $plugin_content))
               {
                   if($this->get('_' . parent::constget('cache_plugins_prefix') . '__' . $name) == 1)
@@ -1033,7 +1051,7 @@
       {
           if($this->plugin_status($name))
           {
-              require_once(parent::constget('cache_plugins_dir') . $name . '.' . parent::constget('cache_extension'));
+              require_once(parent::constget('cache_plugins_dir') . '/' . $name . '.' . parent::constget('cache_extension'));
               return true;
           }
           return false;
