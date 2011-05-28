@@ -99,6 +99,12 @@
     
     private $qc_special_chars = array('#DOT#', '#ALL#', '#SYMB1#', '#SYMB2#', '#SYMB3#', '#SYMB4#', '#SYMB5#', '#SYMB6#', '#SYMB7#', '#SYMB8#', '#SYMB9#', '#SYMB10#', '#SYMB11#', '#SYMB12#', '#SYMB13#', '#SYMB14#', '#SYMB15#', '#SYMB16#', '#SYMB17#', '#SYMB18#', '#SYMB19#', '#SYMB20#', '#SYMB21#', '#SYMB22#');
 
+    private $new_line = '\n';
+    
+    private $each_syntax = '{%s}:{%s}';
+    
+    private $blank = 'blank';
+
     /*
      * Check if cache file is in place,
      * and it has valid timing.
@@ -175,11 +181,11 @@
         $timed = (!is_int($timed)) ? strtotime($timed)-time() : $timed;
   
         $value = $this->cache_default;
-        $value .= "\n" . $val . "";
+        $value .= $this->new_line . $val;
   
         $time_needed = time()+$timed;
         $time = $this->cache_default;
-        $time .= "\n" . $time_needed . "";
+        $time .= $this->new_line . $time_needed;
      
      
         /**
@@ -215,7 +221,7 @@
                 default:
        
                 $value = $this->cache_default;
-                $value .= "\n" . $val . "";
+                $value .= $this->new_line . $val;
            
                 if(file_put_contents($this->cache_dir . "/{$key}." . $this->cache_extension, $value))
                 {
@@ -230,7 +236,7 @@
       
                 $time_needed = time()+$val;
                 $time = $this->cache_default;
-                $time .= "\n" . $time_needed . "";
+                $time .= $this->new_line . $time_needed;
            
                 if(file_put_contents($this->cache_dir . "/{$key}" . $this->cache_prefix . "." . $this->cache_extension, $time))
                 {
@@ -262,7 +268,7 @@
         {
             $cache_output = file_get_contents($this->cache_dir . "/{$key}." . $this->cache_extension);
             $cache_output = str_replace($this->cache_default, '', $cache_output);
-            $cache_output = preg_replace("/\n/", "", $cache_output, 1);
+            $cache_output = preg_replace('/' . $this->new_line . '/', '', $cache_output, 1);
           
             return $cache_output;
         }
@@ -283,7 +289,7 @@
         {
             $cache_output_time = file_get_contents($this->cache_dir . "/{$key}" . $this->cache_prefix . "." . $this->cache_extension);
             $cache_output_time = str_replace($this->cache_default, '', $cache_output_time);
-            $cache_output_time = preg_replace("/\n/", "", $cache_output_time, 1);
+            $cache_output_time = preg_replace('/' . $this->new_line . '/', '', $cache_output_time, 1);
      
             return (integer) $cache_output_time;
         }
@@ -362,7 +368,7 @@
                  * If exists setup details for merging
                  */
                 $array[$num] = $this->get($ary[$num]);
-                $array_imp = implode("\n", $array);
+                $array_imp = implode($this->new_line, $array);
           
                 $array_merge[$num] = $this->get($ary[$num]);
                 $array_imp_merge = implode($this->merge_delim, $array_merge);
@@ -484,10 +490,10 @@
           $ary = '';
           foreach($array as $key => $name)
           {
-              $key = (empty($key)) ? 'blank' : $key;
-              $name = (empty($name)) ? 'blank' : $name;
+              $key = (empty($key)) ? $this->blank : $key;
+              $name = (empty($name)) ? $this->blank : $name;
               $name = str_replace($this->special_chars, $this->qc_special_chars, $name);
-              $ary .= "{{$key}}:{{$name}}";
+              $ary .= sprintf($this->each_syntax, $key, $name);
           }
           
           if($this->put($key_name, $ary, $time))
@@ -508,9 +514,9 @@
        */
       function geteach($key_name)
       {
-          if(preg_match("/[\{(.*)\}\:\{(.*)\}]+/", $this->get($key_name)))
+          if(preg_match("/[" . parse_regex($this->each_syntax) . "]+/", $this->get($key_name)))
           {
-              $result = preg_split("/[\{(.*)\}\:\{(.*)\}]+/", $this->get($key_name), -1, PREG_SPLIT_NO_EMPTY);
+              $result = preg_split("/[" . parse_regex($this->each_syntax) . "]+/", $this->get($key_name), -1, PREG_SPLIT_NO_EMPTY);
               for($i = 0;$i < sizeof($result);$i++)
               {
                   if($i % 2 == 0)
@@ -837,6 +843,42 @@
          }
         return;
      }
+
+    function parse_regex($string, $spec_symbol = '~', $type = '%s')
+    {
+
+        $string_array = array();
+        $str = '';
+
+        for($i = 0;$i < strlen($string);$i++)
+        {
+            if($string[$i] == $type[0])
+            {
+                $string_array[] = $string[$i] . $string[$i+1];
+                $string[$i+1] = $spec_symbol;
+            } else {
+                $string_array[] = str_replace($string[$i], '\\' . $string[$i], $string[$i]);
+            }
+        }
+        for($j = 0;$j < sizeof($string_array);$j++)
+        {
+            if($string_array[$j] == '\\' . $spec_symbol)
+            {
+                if($string_array[$j-1] == $type)
+                {
+                    unset($string_array[$j]);
+                }
+            }
+        }
+
+        foreach($string_array as $str_symbol)
+        {
+            $str .= $str_symbol;
+        }
+
+        return $str;
+
+    }
 
   }
   
