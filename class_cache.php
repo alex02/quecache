@@ -124,6 +124,31 @@
     private $blank = 'blank';
 
     /**
+     * This array stores all
+     * custom functions
+     * defined by third-party.
+     *
+     */
+
+    public $custom_functions = array();
+
+    /**
+     * __call and __set functions
+     * create the custom functions.
+     * 
+     */
+
+    function __call($method, $args)
+    {
+        return call_user_func_array($this->custom_functions[$method], $args);
+    }
+   
+    function __set($method, $value)
+    {
+        $this->custom_functions[$method] = $value;
+    }
+
+    /**
     * Really simple function to get
     * cache class constants in plugins
     *
@@ -151,11 +176,9 @@
     {
         if(file_exists($this->cache_dir . "/{$val}" . $this->cache_prefix . "." . $this->cache_extension) && file_exists($this->cache_dir . "/{$val}." . $this->cache_extension))  
         {
-          /**
-           * If exists read output
-           */
             $output = file_get_contents($this->cache_dir . "/{$val}" . $this->cache_prefix . "." . $this->cache_extension);
             $output = str_replace($this->cache_default, '', $output);
+            $output = preg_replace('/' . $this->new_line . '/', '', $output, 1);
             if((int) $output >= time() || $output == 0)
             {
                 return true;
@@ -203,7 +226,6 @@
         $time_needed = time()+$timed;
         $time = $this->cache_default;
         $time .= $this->new_line . $time_needed;
-     
      
         /**
          * Return :: If saved ? true : false
@@ -401,7 +423,6 @@
         }
         return false;
     }
-
 
     /**
      * Check if some key is already merged cache.
@@ -695,7 +716,6 @@
         }
         
         return (array) $asarry;
-        
     }
     
     /**
@@ -895,7 +915,6 @@
         }
 
         return $str;
-
     }
 
   }
