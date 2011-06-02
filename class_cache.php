@@ -124,31 +124,6 @@
     private $blank = 'blank';
 
     /**
-     * This array stores all
-     * custom functions
-     * defined by third-party.
-     *
-     */
-
-    public $custom_functions = array();
-
-    /**
-     * __call and __set functions
-     * create the custom functions.
-     * 
-     */
-
-    function __call($method, $args)
-    {
-        return call_user_func_array($this->custom_functions[$method], $args);
-    }
-   
-    function __set($method, $value)
-    {
-        $this->custom_functions[$method] = $value;
-    }
-
-    /**
     * Really simple function to get
     * cache class constants in plugins
     *
@@ -183,6 +158,7 @@
             {
                 return true;
             }
+            return false;
         }
         return false;  
     }
