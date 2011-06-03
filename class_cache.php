@@ -226,9 +226,9 @@
      * @return boolean
      *
      */
-    public function update($key, $val, $mode = 'key')
+    public function update($key, $val, $mode = 'key', $any = false)
     {
-        if($this->exists($key))
+        if($this->exists($key) || (bool) $any === true)
         {
             switch($mode)
             {
@@ -347,7 +347,7 @@
      */
     public function make_zero($key)
     {
-        if($this->update($key, -time(), 'time')) /** Default is Nth+time, now -time+time = 0 */
+        if($this->update($key, -time(), 'time', true)) /** Default is Nth+time, now -time+time = 0 */
         {
             return true;
         }
@@ -592,7 +592,7 @@
     *
     * @return array
     */
-    public function asarray($expr, &$asarry = '')
+    public function asarray($expr = '/(.*)/', &$asarry = '')
     {
        
        /**
@@ -677,7 +677,10 @@
             */
             if(!$this->exists($asarry[$i]))
             {
-                unset($asarry[$i]);
+                if($this->get_time($asarry[$i]) <> 0)
+                {
+                    unset($asarry[$i]);
+                }
             }
             
            /**
@@ -856,6 +859,34 @@
          }
         return;
      }
+
+    public function restore($keys = null)
+    {
+        if(empty($keys) || $keys == null || $keys == 'all')
+        {
+            foreach($this->asarray('/(.*)/') as $cachekey)
+            {
+                if(file_exists($this->cache_dir . '/' . $cachekey . '.' . $this->cache_extension) && !$this->exists($cachekey))
+                {
+                    if($this->make_zero($cachekey))
+                    {
+                        continue;
+                    }
+                }
+            }
+            return true;
+        }
+        
+        if(file_exists($this->cache_dir . '/' . $keys . '.' . $this->cache_extension) && !$this->exists($keys))
+        {
+            if($this->make_zero($keys))
+            {
+                return true;
+            }
+            return false;
+        }
+        return false;
+    }
 
     private function parse_regex($string, $spec_symbol = '~', &$type = '%s')
     {

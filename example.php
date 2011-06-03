@@ -29,6 +29,7 @@
   * cache::cut
   * cache::cuteach
   * cache::geteach
+  * cache::restore
   */
 
   /**
