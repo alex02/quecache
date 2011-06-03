@@ -677,10 +677,7 @@
             */
             if(!$this->exists($asarry[$i]))
             {
-                if($this->get_time($asarry[$i]) <> 0)
-                {
-                    unset($asarry[$i]);
-                }
+                unset($asarry[$i]);
             }
             
            /**
