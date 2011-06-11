@@ -6,6 +6,7 @@
    * Simple, flexible and powerful caching system for you.
    *
    * @package    Que Cache
+   * @version    1.1.8
    * @copyright  Copyright (c) 2011 Alex Emilov Georgiev
    * @license http://www.gnu.org/licenses/gpl.html    GNU GPL
    */
