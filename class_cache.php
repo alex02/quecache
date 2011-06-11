@@ -204,7 +204,7 @@
         $time .= $this->new_line . $time_needed;
      
         /**
-         * Return :: If saved ? true : false
+         * Return :: If its saved, then return true
          *
          */
          
@@ -1038,7 +1038,7 @@
           if(file_exists(parent::constget('cache_plugins_dir') . '/' . $name . '.' . parent::constget('cache_extension')))
           {
               $plugin_content = file_get_contents(parent::constget('cache_plugins_dir') . '/' . $name . '.' . parent::constget('cache_extension'));
-              if(preg_match('/\s?\s?\s?if\(!class_exists\(\'(cache)\'\)\)\s?\s?\s?\{?\s?\s?\s?\s?\s?\s?\s?(exit|die)?(\((.*)\))?\;?\s?\s?\s?\}?/', $plugin_content))
+              if(preg_match('/if\(\!class\_exists\((\'|"){1}cache(\'|"){1}\)\)((.|\n)+)?{((.|\n)+)?(exit(\((0|\'(.*)\'|"(.*)"|false|true)?\))?|die(\((0|\'(.*)\'|"(.*)"|false|true)?\))?)\;((.|\n)+)?\}/i', $plugin_content))
               {
                   if($this->get('_' . parent::constget('cache_plugins_prefix') . '__' . $name) == 1)
                   {
