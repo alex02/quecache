@@ -18,7 +18,7 @@ if (version_compare(PHP_VERSION, '5.0.0', '>=')) {
 echo "<br />";
 
 echo "<span>Is cache directory writable: </span>";
-if(is_dir('./cache') && is_writable('./cache'))
+if(is_writable('./cache'))
 {
   echo "<span id=\"success\">Success</span>";
 } else {

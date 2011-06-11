@@ -6,6 +6,7 @@
    * Simple, flexible and powerful caching system for you.
    *
    * @package    Que Cache
+   * @version    1.1.8
    * @copyright  Copyright (c) 2011 Alex Emilov Georgiev
    * @license http://www.gnu.org/licenses/gpl.html    GNU GPL
    */
@@ -73,7 +74,7 @@
     *
     * @var string
     */
-    private $cache_plugins_dir = './plugins/';
+    private $cache_plugins_dir = './plugins';
     
     /**
     * Plugin prefix.
@@ -99,32 +100,31 @@
     
     private $qc_special_chars = array('#DOT#', '#ALL#', '#SYMB1#', '#SYMB2#', '#SYMB3#', '#SYMB4#', '#SYMB5#', '#SYMB6#', '#SYMB7#', '#SYMB8#', '#SYMB9#', '#SYMB10#', '#SYMB11#', '#SYMB12#', '#SYMB13#', '#SYMB14#', '#SYMB15#', '#SYMB16#', '#SYMB17#', '#SYMB18#', '#SYMB19#', '#SYMB20#', '#SYMB21#', '#SYMB22#');
 
-    /*
-     * Check if cache file is in place,
-     * and it has valid timing.
+    /**
+     * Please don't change " to ' for this new_line
      *
-     * @param string $val
-     * @return boolean
      */
-     
-    public function exists($val)  
-    {
-        if(file_exists($this->cache_dir . "/{$val}" . $this->cache_prefix . "." . $this->cache_extension) && file_exists($this->cache_dir . "/{$val}." . $this->cache_extension))  
-        {
-          /**
-           * If exists read output
-           */
-            $output = file_get_contents($this->cache_dir . "/{$val}" . $this->cache_prefix . "." . $this->cache_extension);
-            $output = str_replace($this->cache_default, '', $output);
-            if((int) $output >= time() || $output == 0)
-            {
-                return true;
-            }
-        }
-        return false;  
-    }
+    private $new_line = "\n";
     
-   /**
+    /**
+     * Setup custom sytax for each cache cut.
+     * Better not change this.Use only %s.If you want
+     * to save other type of information use other (like %d),
+     * but by default %s is good.Use it only twice here.
+     * Use this wisely.
+     *
+     */
+    private $each_syntax = '{%s}:{%s}';
+    
+    private $default_syntax_type = '%s';
+    
+    /**
+     * The blank parameter for null array keys or values
+     *
+     */
+    private $blank = 'blank';
+
+    /**
     * Really simple function to get
     * cache class constants in plugins
     *
@@ -140,6 +140,29 @@
         return;
     }
 
+    /*
+     * Check if cache file is in place,
+     * and it has valid timing.
+     *
+     * @param string $val
+     * @return boolean
+     */
+     
+    public function exists($val)  
+    {
+        if(file_exists($this->cache_dir . "/{$val}" . $this->cache_prefix . "." . $this->cache_extension) && file_exists($this->cache_dir . "/{$val}." . $this->cache_extension))  
+        {
+            $output = file_get_contents($this->cache_dir . "/{$val}" . $this->cache_prefix . "." . $this->cache_extension);
+            $output = str_replace($this->cache_default, '', $output);
+            $output = preg_replace('/' . $this->new_line . '/', '', $output, 1);
+            if((int) $output >= time() || $output == 0)
+            {
+                return true;
+            }
+            return false;
+        }
+        return false;  
+    }
 
     /*
      * Saves values in cache file.
@@ -158,7 +181,7 @@
     {
         /**
          * Check for directory, if not try to create it
-         * Setup correct permissions, too.
+         * Setup correct permissions, too (0770 +).
          *
          */
         if(!is_dir($this->cache_dir))
@@ -175,15 +198,14 @@
         $timed = (!is_int($timed)) ? strtotime($timed)-time() : $timed;
   
         $value = $this->cache_default;
-        $value .= "\n" . $val . "";
+        $value .= $this->new_line . $val;
   
         $time_needed = time()+$timed;
         $time = $this->cache_default;
-        $time .= "\n" . $time_needed . "";
-     
+        $time .= $this->new_line . $time_needed;
      
         /**
-         * Return :: If saved ? true : false
+         * Return :: If its saved, then return true
          *
          */
          
@@ -205,9 +227,9 @@
      * @return boolean
      *
      */
-    public function update($key, $val, $mode = 'key')
+    public function update($key, $val, $mode = 'key', $any = false)
     {
-        if($this->exists($key))
+        if($this->exists($key) || (bool) $any === true)
         {
             switch($mode)
             {
@@ -215,7 +237,7 @@
                 default:
        
                 $value = $this->cache_default;
-                $value .= "\n" . $val . "";
+                $value .= $this->new_line . $val;
            
                 if(file_put_contents($this->cache_dir . "/{$key}." . $this->cache_extension, $value))
                 {
@@ -230,7 +252,7 @@
       
                 $time_needed = time()+$val;
                 $time = $this->cache_default;
-                $time .= "\n" . $time_needed . "";
+                $time .= $this->new_line . $time_needed;
            
                 if(file_put_contents($this->cache_dir . "/{$key}" . $this->cache_prefix . "." . $this->cache_extension, $time))
                 {
@@ -262,8 +284,8 @@
         {
             $cache_output = file_get_contents($this->cache_dir . "/{$key}." . $this->cache_extension);
             $cache_output = str_replace($this->cache_default, '', $cache_output);
-            $cache_output = preg_replace("/\n/", "", $cache_output, 1);
-          
+            $cache_output = preg_replace('/' . $this->new_line . '/', '', $cache_output, 1);
+            
             return $cache_output;
         }
         return;
@@ -283,7 +305,7 @@
         {
             $cache_output_time = file_get_contents($this->cache_dir . "/{$key}" . $this->cache_prefix . "." . $this->cache_extension);
             $cache_output_time = str_replace($this->cache_default, '', $cache_output_time);
-            $cache_output_time = preg_replace("/\n/", "", $cache_output_time, 1);
+            $cache_output_time = preg_replace('/' . $this->new_line . '/', '', $cache_output_time, 1);
      
             return (integer) $cache_output_time;
         }
@@ -326,7 +348,7 @@
      */
     public function make_zero($key)
     {
-        if($this->update($key, -time(), 'time')) /** Default is Nth+time, now -time+time = 0 */
+        if($this->update($key, -time(), 'time', true)) /** Default is Nth+time, now -time+time = 0 */
         {
             return true;
         }
@@ -362,7 +384,7 @@
                  * If exists setup details for merging
                  */
                 $array[$num] = $this->get($ary[$num]);
-                $array_imp = implode("\n", $array);
+                $array_imp = implode($this->new_line, $array);
           
                 $array_merge[$num] = $this->get($ary[$num]);
                 $array_imp_merge = implode($this->merge_delim, $array_merge);
@@ -370,7 +392,7 @@
         }
         
         /**
-         * If merged succesfully => return
+         * If merged succesfully then return
          */
         if($this->put($merge_key, $array_imp, $timer) && $this->put($merge_key . $this->merged_prefix, $array_imp_merge, $timer))
         {
@@ -378,7 +400,6 @@
         }
         return false;
     }
-
 
     /**
      * Check if some key is already merged cache.
@@ -484,10 +505,10 @@
           $ary = '';
           foreach($array as $key => $name)
           {
-              $key = (empty($key)) ? 'blank' : $key;
-              $name = (empty($name)) ? 'blank' : $name;
+              $key = (empty($key)) ? $this->blank : $key;
+              $name = (empty($name)) ? $this->blank : $name;
               $name = str_replace($this->special_chars, $this->qc_special_chars, $name);
-              $ary .= "{{$key}}:{{$name}}";
+              $ary .= sprintf($this->each_syntax, $key, $name);
           }
           
           if($this->put($key_name, $ary, $time))
@@ -508,9 +529,9 @@
        */
       function geteach($key_name)
       {
-          if(preg_match("/[\{(.*)\}\:\{(.*)\}]+/", $this->get($key_name)))
+          if(preg_match("/[" . $this->parse_regex($this->each_syntax) . "]+/", $this->get($key_name)))
           {
-              $result = preg_split("/[\{(.*)\}\:\{(.*)\}]+/", $this->get($key_name), -1, PREG_SPLIT_NO_EMPTY);
+              $result = preg_split("/[" . $this->parse_regex($this->each_syntax) . "]+/", $this->get($key_name), -1, PREG_SPLIT_NO_EMPTY);
               for($i = 0;$i < sizeof($result);$i++)
               {
                   if($i % 2 == 0)
@@ -572,7 +593,7 @@
     *
     * @return array
     */
-    public function asarray($expr, &$asarry = '')
+    public function asarray($expr = '/(.*)/', &$asarry = '')
     {
        
        /**
@@ -672,7 +693,6 @@
         }
         
         return (array) $asarry;
-        
     }
     
     /**
@@ -838,6 +858,70 @@
         return;
      }
 
+    public function restore($keys = null)
+    {
+        if(empty($keys) || $keys == null || $keys == 'all')
+        {
+            foreach($this->asarray('/(.*)/') as $cachekey)
+            {
+                if(file_exists($this->cache_dir . '/' . $cachekey . '.' . $this->cache_extension) && !$this->exists($cachekey))
+                {
+                    if($this->make_zero($cachekey))
+                    {
+                        continue;
+                    }
+                }
+            }
+            return true;
+        }
+        
+        if(file_exists($this->cache_dir . '/' . $keys . '.' . $this->cache_extension) && !$this->exists($keys))
+        {
+            if($this->make_zero($keys))
+            {
+                return true;
+            }
+            return false;
+        }
+        return false;
+    }
+
+    private function parse_regex($string, $spec_symbol = '~', &$type = '%s')
+    {
+
+        $str = '';
+        $type = $this->default_syntax_type;
+        $string_array = array();
+
+        for($i = 0;$i < strlen($string);$i++)
+        {
+            if($string[$i] == $type[0])
+            {
+                $string_array[] = $string[$i] . $string[$i+1];
+                $string[$i+1] = $spec_symbol;
+            } else {
+                $string_array[] = str_replace($string[$i], '\\' . $string[$i], $string[$i]);
+            }
+        }
+        for($j = 0;$j < sizeof($string_array);$j++)
+        {
+            if($string_array[$j] == '\\' . $spec_symbol)
+            {
+                if($string_array[$j-1] == $type)
+                {
+                    unset($string_array[$j]);
+                }
+            }
+        }
+
+        foreach($string_array as $str_symbol)
+        {
+            $str .= $str_symbol;
+        }
+
+        return $str;
+    }
+
   }
   
   class plugin extends cache
@@ -879,7 +963,7 @@
       */
       public function plugin_setup($name)
       {
-          $plugin = parent::constget('cache_plugins_dir') . $name . '.' . parent::constget('cache_extension');
+          $plugin = parent::constget('cache_plugins_dir') . '/' . $name . '.' . parent::constget('cache_extension');
           if($this->put('_' . parent::constget('cache_plugins_prefix') . '__' . $name, 1, -time()))
           {
               return true;
@@ -952,10 +1036,10 @@
       public function plugin_exists($name)
       {
       
-          if(file_exists(parent::constget('cache_plugins_dir') . $name . '.' . parent::constget('cache_extension')))
+          if(file_exists(parent::constget('cache_plugins_dir') . '/' . $name . '.' . parent::constget('cache_extension')))
           {
-              $plugin_content = file_get_contents(parent::constget('cache_plugins_dir') . $name . '.' . parent::constget('cache_extension'));
-              if(preg_match('/\s?\s?\s?if\(!class_exists\(\'(cache)\'\)\)\s?\s?\s?\{?\s?\s?\s?\s?\s?\s?\s?(exit|die)?(\((.*)\))?\;?\s?\s?\s?\}?/', $plugin_content))
+              $plugin_content = file_get_contents(parent::constget('cache_plugins_dir') . '/' . $name . '.' . parent::constget('cache_extension'));
+              if(preg_match('/if\(\!class\_exists\((\'|"){1}cache(\'|"){1}\)\)((.|\n)+)?{((.|\n)+)?(exit(\((0|\'(.*)\'|"(.*)"|false|true)?\))?|die(\((0|\'(.*)\'|"(.*)"|false|true)?\))?)\;((.|\n)+)?\}/i', $plugin_content))
               {
                   if($this->get('_' . parent::constget('cache_plugins_prefix') . '__' . $name) == 1)
                   {
@@ -991,7 +1075,7 @@
       {
           if($this->plugin_status($name))
           {
-              require_once(parent::constget('cache_plugins_dir') . $name . '.' . parent::constget('cache_extension'));
+              require_once(parent::constget('cache_plugins_dir') . '/' . $name . '.' . parent::constget('cache_extension'));
               return true;
           }
           return false;

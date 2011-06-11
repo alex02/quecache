@@ -1,4 +1,17 @@
 /******************************************************************\
+************************* Que Cache 1.1.8 **************************
+* Added new function Cache::restore, to restore all inacvite cache *
+* Added Cache::asarray default syntax for listing all active cache *
+* Cache::update now may change even zero timed cache values        *
+* Cleaned code and improved comment details for some methods|vars  *
+* Added slash (/ at the end) in plugins dir variable               *
+* Fixed $this in geteach and added private type for parse_regex    *
+* Removed some useless codes. See commit @f5dbd0f                  *
+* Add parse_regex function and several new private variables       *
+* Fixed bool use in Cache::destroy                                 *
+\******************************************************************/
+
+/******************************************************************\
 ************************* Que Cache 1.1.7 **************************
 * Added new two functions cache::geteach and cache::cuteach        *
 * Fixed plugin::status activating plugins                          *

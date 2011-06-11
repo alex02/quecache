@@ -1,5 +1,10 @@
 <?php
   
+  /*
+   * Que Cache
+   * 1.1.8
+   */
+  
   /**
    * Add the cache file
    */
@@ -29,6 +34,7 @@
   * cache::cut
   * cache::cuteach
   * cache::geteach
+  * cache::restore
   */
 
   /**
