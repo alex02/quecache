@@ -860,7 +860,7 @@
 
     public function restore($keys = null)
     {
-        if(empty($keys) || $keys == null || $keys == 'all')
+        if(empty($keys) || $keys == null)
         {
             foreach($this->asarray('/(.*)/') as $cachekey)
             {
