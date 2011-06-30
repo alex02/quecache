@@ -1,4 +1,15 @@
 /******************************************************************\
+************************* Que Cache 2.0 ****************************
+* Cleaned code and removed plugins for cache                       *
+* External variables are moved to configuration file               *
+* Cuteach and Geteach fixed special char conflict with names       *
+* Changed structure of files and variables                         *
+* Store cache in different directories                             *
+* Cache::Cut is deprecated                                         *
+* Version Que Cache 2.0                                            *
+\******************************************************************/
+
+/******************************************************************\
 ************************* Que Cache 1.1.8 **************************
 * Added new function Cache::restore, to restore all inacvite cache *
 * Added Cache::asarray default syntax for listing all active cache *

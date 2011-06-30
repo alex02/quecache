@@ -2,11 +2,12 @@
 
 /**
  * Que Cache
- * @version 1.1.8
+ * @version 2.0
  */
- 
-include('class_cache.php');
-$cache = new cache();
+
+include('config.cache.php');
+include('class.cache.php');
+$cache = new QueCache();
 
 // Store content in cache
 // For one hour
@@ -89,7 +90,7 @@ This is one of the most important functions in Que Cache.Separating content in o
 
 $array = array(
     'name'    =>    'Guest',
-    'location'    =>    'checking example source code',
+    'location'    =>    'checking this example source code',
     'ip'    =>    'hidden',
 );
 
@@ -99,9 +100,9 @@ if($cache->cuteach('user_details', $array))
 }
 
 ?>
-Results:<br />
+Results:
 <br />
-You are <?= $results['name']; ?>, is <?= $results['location']; ?><br />
+You are <?= $results['name']; ?>, <?= $results['location']; ?><br />
 IP: <?= $results['ip']; ?>
 <h3>Returning time of cache</h3>
 <?php
@@ -110,17 +111,6 @@ $cache->put('SomeCache', 'Content', 3600);
 
 ?>
 Cache 'SomeCache' should expire at <?= date('d.m.Y g:i', $cache->get_time('SomeCache')); ?> (after one hour)
-<h3>Using plugins</h3>
-<?php
-
-$cache->plugin = new plugin(array('test_addon'));
-$test_addon = $cache->plugin->test_addon;
-
-// This test plugins returns value for some cache
-// Example alias of cache::get.
-
-?>
-Result: <?= $test_addon->test_it('SomeCache'); ?>
 <h3>Update and alter</h3>
 <?php
 
