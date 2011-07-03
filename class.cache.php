@@ -234,46 +234,6 @@
             return;
         }
         
-        function cuteach($key_name, array $array = array(), $time = '')
-          {
-              global $config;
-              $ary = '';
-              foreach($array as $key => $name)
-              {
-                  $key = (empty($key)) ? trim($config['cache']['blank']) : trim($key);
-                  $name = (empty($name)) ? $config['cache']['blank'] : $name;
-                  $ary .= sprintf($config['cache']['syntax'], $key, $name);
-              }
-              
-              if($this->put($key_name, $ary, $time))
-              {
-                  return true;
-              }
-              return false;
-          }
-          
-        function geteach($key_name)
-        {
-            global $config;
-            
-            if(preg_match("/(" . str_replace($config['cache']['syntax_type'], "(.*)", $this->parse_regex($config['cache']['syntax'])) . ")+/", $this->get($key_name)))
-            {
-                $result = preg_split("/[" . str_replace($config['cache']['syntax_type'], '', $this->parse_regex($config['cache']['syntax'])) . "]+/", $this->get($key_name), -1, PREG_SPLIT_NO_EMPTY);
-                
-                for($i = 0;$i < sizeof($result);$i++)
-                {
-                    if($i % 2 == 0)
-                    {
-                        $this->keys[$i] = $result[$i];
-                    } else {
-                        $this->names[$i] = $result[$i];
-                    }
-                }
-                return (array) array_combine($this->keys, $this->names);
-            }
-            return false;
-        }
-          
         public function alter($key, $value)
         {
             global $config;
@@ -413,8 +373,8 @@
             return; 
         }
         
-         public function remove_all()
-         {
+        public function remove_all()
+        {
             global $config;
             
             $dir = scandir($config['cache']['directory'], 1);
@@ -449,11 +409,12 @@
                 
              }
             return;
-         }
+        }
 
         public function restore($keys = null)
         {
             global $config;
+            
             if(empty($keys) || $keys == null)
             {
                 foreach($this->asarray('/(.*)/') as $cachekey)
@@ -479,43 +440,5 @@
             }
             return false;
         }
-
-        private function parse_regex($string, $spec_symbol = '~')
-        {
-            global $config;
-            
-            $str = '';
-            $string_array = array();
-
-            for($i = 0;$i < strlen($string);$i++)
-            {
-                if($string[$i] == $config['cache']['syntax_type'][0])
-                {
-                    $string_array[] = $string[$i] . $string[$i+1];
-                    $string[$i+1] = $spec_symbol;
-                } else {
-                    $string_array[] = str_replace($string[$i], '\\' . $string[$i], $string[$i]);
-                }
-            }
-            for($j = 0;$j < sizeof($string_array);$j++)
-            {
-                if($string_array[$j] == '\\' . $spec_symbol)
-                {
-                    if($string_array[$j-1] == $config['cache']['syntax_type'])
-                    {
-                        unset($string_array[$j]);
-                    }
-                }
-            }
-
-            foreach($string_array as $str_symbol)
-            {
-                $str .= $str_symbol;
-            }
-
-            return $str;
-        }
-
-    }
-
+        
 ?>

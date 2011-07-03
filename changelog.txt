@@ -6,6 +6,11 @@
 * Changed structure of files and variables                         *
 * Store cache in different directories                             *
 * Cache::Cut is deprecated                                         *
+* Cache::Geteach, Cuteach and the regex parser are deprecated,     *
+* the Que Cache serialization method was replaced with the way     *
+* better default serialization                                     *
+* No more constant for extension and changed extension returner    *
+* to not cause E_STRICT warings                                    *
 * Version Que Cache 2.0                                            *
 \******************************************************************/
 
