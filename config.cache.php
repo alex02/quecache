@@ -14,5 +14,6 @@ $config['cache']['merge'] = '_merged';
 $config['cache']['default'] = '<?php /* QueCache */ exit; ?>';
 $config['cache']['delim'] = '--#--';
 $config['cache']['extension'] = substr(strrchr(__FILE__, "."), 1);
+$config['cache']['line'] = "\n";
 
 ?>

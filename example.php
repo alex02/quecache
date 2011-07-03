@@ -94,9 +94,9 @@ $array = array(
     'ip'    =>    'hidden',
 );
 
-if($cache->cuteach('user_details', $array))
+if($cache->put('user_details', serialize($array)))
 {
-    $results = $cache->geteach('user_details');
+    $results = unserialize($cache->get('user_details'));
 }
 
 ?>

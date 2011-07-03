@@ -29,14 +29,14 @@
          *
          */
         
-        public function exists($val, $dir = null)  
+        public function exists($key, $dir = null)  
         {
             global $config;
             
             $directory = ($dir !== null) ? $dir : $config['cache']['directory'];
-            if(file_exists($directory . "/{$val}" . $config['cache']['prefix'] . "." . $config['cache']['extension']) && file_exists($directory . "/{$val}." . $config['cache']['extension']))  
+            if(file_exists($directory . "/{$key}" . $config['cache']['prefix'] . "." . $config['cache']['extension']) && file_exists($directory . "/{$key}." . $config['cache']['extension']))  
             {
-                $output = file_get_contents($directory . "/{$val}" . $config['cache']['prefix'] . "." . $config['cache']['extension']);
+                $output = file_get_contents($directory . "/{$key}" . $config['cache']['prefix'] . "." . $config['cache']['extension']);
                 $output = str_replace($config['cache']['default'], '', $output);
                 $output = preg_replace('/' . $config['cache']['line'] . '/', '', $output, 1);
                 if((int) $output >= time() || $output == 0)
@@ -48,7 +48,7 @@
             return false;  
         }
         
-        public function put($key, $val, $timed = '', $dir = null)
+        public function put($key, $value, $time = '', $dir = null)
         {
             global $config;
             
@@ -57,19 +57,19 @@
                 mkdir($config['cache']['directory'], 0770);
             }
             
-            $timed = (!empty($timed)) ? $timed : $config['cache']['time'];
-            $timed = (!is_int($timed)) ? strtotime($timed)-time() : $timed;
+            $time = (!empty($time)) ? $time : $config['cache']['time'];
+            $time = (!is_int($time)) ? strtotime($time)-time() : $time;
 
-            $value = $config['cache']['default'];
-            $value .= $config['cache']['line'] . $val;
+            $prepared_value = $config['cache']['default'];
+            $prepared_value .= $config['cache']['line'] . $value;
 
-            $time_needed = time()+$timed;
-            $time = $config['cache']['default'];
-            $time .= $config['cache']['line'] . $time_needed;
+            $time_needed = time()+$time;
+            $prepared_time = $config['cache']['default'];
+            $prepared_time .= $config['cache']['line'] . $time_needed;
             
             $directory = ($dir !== null) ? $dir : $config['cache']['directory'];
             
-            if(file_put_contents($directory . "/{$key}." . $config['cache']['extension'], $value) && (file_put_contents($directory . "/{$key}" . $config['cache']['prefix'] . "." . $config['cache']['extension'], $time)))
+            if(file_put_contents($directory . "/{$key}." . $config['cache']['extension'], $prepared_value) && (file_put_contents($directory . "/{$key}" . $config['cache']['prefix'] . "." . $config['cache']['extension'], $prepared_time)))
             {
                 return true;
             }
@@ -77,7 +77,7 @@
             return false;
         }
         
-        public function update($key, $val, $mode = 'key', $any = false)
+        public function update($key, $value, $mode = 'key', $any = false)
         {
             global $config;
             if($this->exists($key) || (bool) $any === true)
@@ -87,10 +87,10 @@
                     case 'key':
                     default:
            
-                    $value = $config['cache']['default'];
-                    $value .= $config['cache']['line'] . $val;
+                    $prepared_value = $config['cache']['default'];
+                    $prepared_value .= $config['cache']['line'] . $value;
                
-                    if(file_put_contents($config['cache']['directory'] . "/{$key}." . $config['cache']['extension'], $value))
+                    if(file_put_contents($config['cache']['directory'] . "/{$key}." . $config['cache']['extension'], $prepared_value))
                     {
                         return true;
                     } else {
@@ -101,11 +101,11 @@
                     
                     case 'time':
           
-                    $time_needed = time()+$val;
-                    $time = $config['cache']['default'];
-                    $time .= $config['cache']['line'] . $time_needed;
+                    $time_needed = time()+$value;
+                    $prepared_time = $config['cache']['default'];
+                    $prepared_time .= $config['cache']['line'] . $time_needed;
                
-                    if(file_put_contents($config['cache']['directory'] . "/{$key}" . $config['cache']['prefix'] . "." . $config['cache']['extension'], $time))
+                    if(file_put_contents($config['cache']['directory'] . "/{$key}" . $config['cache']['prefix'] . "." . $config['cache']['extension'], $prepared_time))
                     {
                         return true;
                     } else {
@@ -136,6 +136,7 @@
         public function get_time($key)
         {
             global $config;
+            
             if($this->exists($key))
             {
                 $cache_output_time = file_get_contents($config['cache']['directory'] . "/{$key}" . $config['cache']['prefix'] . "." . $config['cache']['extension']);
@@ -440,5 +441,5 @@
             }
             return false;
         }
-        
+    }
 ?>
