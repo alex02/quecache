@@ -8,7 +8,7 @@
     * @package Que Cache
     * @version 2.0
     * @copyright Copyright (c) 2011 Alex Emilov Georgiev
-    * @license http://www.gnu.org/licenses/gpl.html GNU GPL
+    * @license Dual license http://www.gnu.org/licenses/gpl.html GNU GPL || http://www.opensource.org/licenses/mit-license.php MIT
     */
 
     class QueCache
@@ -34,12 +34,14 @@
             global $config;
             
             $directory = ($dir !== null) ? $dir : $config['cache']['directory'];
+            
             if(file_exists($directory . "/{$key}" . $config['cache']['prefix'] . "." . $config['cache']['extension']) && file_exists($directory . "/{$key}." . $config['cache']['extension']))  
             {
                 $output = file_get_contents($directory . "/{$key}" . $config['cache']['prefix'] . "." . $config['cache']['extension']);
                 $output = str_replace($config['cache']['default'], '', $output);
                 $output = preg_replace('/' . $config['cache']['line'] . '/', '', $output, 1);
-                if((int) $output >= time() || $output == 0)
+                
+                if((integer) $output >= time() || $output == 0)
                 {
                     return true;
                 }
@@ -54,7 +56,7 @@
             
             if(!is_dir($config['cache']['directory']))
             {
-                mkdir($config['cache']['directory'], 0770);
+                @mkdir($config['cache']['directory'], 0770);
             }
             
             $time = (!empty($time)) ? $time : $config['cache']['time'];
@@ -69,7 +71,7 @@
             
             $directory = ($dir !== null) ? $dir : $config['cache']['directory'];
             
-            if(file_put_contents($directory . "/{$key}." . $config['cache']['extension'], $prepared_value) && (file_put_contents($directory . "/{$key}" . $config['cache']['prefix'] . "." . $config['cache']['extension'], $prepared_time)))
+            if(@file_put_contents($directory . "/{$key}." . $config['cache']['extension'], $prepared_value) && (@file_put_contents($directory . "/{$key}" . $config['cache']['prefix'] . "." . $config['cache']['extension'], $prepared_time)))
             {
                 return true;
             }
@@ -80,17 +82,19 @@
         public function update($key, $value, $mode = 'key', $any = false)
         {
             global $config;
+            
             if($this->exists($key) || (bool) $any === true)
             {
                 switch($mode)
                 {
+                    case 'name':
                     case 'key':
                     default:
            
                     $prepared_value = $config['cache']['default'];
                     $prepared_value .= $config['cache']['line'] . $value;
                
-                    if(file_put_contents($config['cache']['directory'] . "/{$key}." . $config['cache']['extension'], $prepared_value))
+                    if(@file_put_contents($config['cache']['directory'] . "/{$key}." . $config['cache']['extension'], $prepared_value))
                     {
                         return true;
                     } else {
@@ -100,19 +104,22 @@
                     break;
                     
                     case 'time':
+                    case 'timing':
           
                     $time_needed = time()+$value;
                     $prepared_time = $config['cache']['default'];
                     $prepared_time .= $config['cache']['line'] . $time_needed;
                
-                    if(file_put_contents($config['cache']['directory'] . "/{$key}" . $config['cache']['prefix'] . "." . $config['cache']['extension'], $prepared_time))
+                    if(@file_put_contents($config['cache']['directory'] . "/{$key}" . $config['cache']['prefix'] . "." . $config['cache']['extension'], $prepared_time))
                     {
                         return true;
                     } else {
                         return false;
                     }
+                    
                     break;
                 }
+                return false;
             }
             return false;
         }
@@ -122,9 +129,10 @@
             global $config;
             
             $directory = ($dir !== null) ? $dir : $config['cache']['directory'];
+            
             if($this->exists($key, $directory))
             {
-                $cache_output = file_get_contents($directory . "/{$key}." . $config['cache']['extension']);
+                $cache_output = @file_get_contents($directory . "/{$key}." . $config['cache']['extension']);
                 $cache_output = str_replace($config['cache']['default'], '', $cache_output);
                 $cache_output = preg_replace('/' . $config['cache']['line'] . '/', '', $cache_output, 1);
                 
@@ -139,7 +147,7 @@
             
             if($this->exists($key))
             {
-                $cache_output_time = file_get_contents($config['cache']['directory'] . "/{$key}" . $config['cache']['prefix'] . "." . $config['cache']['extension']);
+                $cache_output_time = @file_get_contents($config['cache']['directory'] . "/{$key}" . $config['cache']['prefix'] . "." . $config['cache']['extension']);
                 $cache_output_time = str_replace($config['cache']['default'], '', $cache_output_time);
                 $cache_output_time = preg_replace('/' . $config['cache']['line'] . '/', '', $cache_output_time, 1);
          
@@ -153,12 +161,13 @@
            global $config;
            
            $directory = ($dir !== null) ? $dir : $config['cache']['directory'];
+           
            if($this->exists($key, $dir))
             {
                 if($this->get_time($key) !== 0 || ($this->get_time($key) == 0 && (bool) $del_zero === true))
                 {
-                    unlink($directory . "/{$key}." . $config['cache']['extension']);
-                    unlink($directory . "/{$key}" . $config['cache']['prefix'] . "." . $config['cache']['extension']);
+                    @unlink($directory . "/{$key}." . $config['cache']['extension']);
+                    @unlink($directory . "/{$key}" . $config['cache']['prefix'] . "." . $config['cache']['extension']);
                 }
                 return true;
             }
@@ -174,7 +183,7 @@
             return false;
         }
         
-        public function merge($merge_key, $ary, $timer = '')
+        public function merge($merge_key, $ary, $time = '')
         {
             global $config;
             
@@ -193,7 +202,7 @@
                 }
             }
             
-            if($this->put($merge_key, $array_imp, $timer) && $this->put($merge_key . $config['cache']['merge'], $array_imp_merge, $timer))
+            if($this->put($merge_key, $array_imp, $time) && $this->put($merge_key . $config['cache']['merge'], $array_imp_merge, $time))
             {
                 return true;
             }
@@ -366,8 +375,8 @@
                 {
                     if(!$this->exists($name) && $this->get_time($name) !== 0)
                     {
-                        unlink($config['cache']['directory'] . "/{$name}." . $config['cache']['extension']);
-                        unlink($config['cache']['directory'] . "/{$name}" . $config['cache']['prefix'] . "." . $config['cache']['extension']);
+                        @unlink($config['cache']['directory'] . "/{$name}." . $config['cache']['extension']);
+                        @unlink($config['cache']['directory'] . "/{$name}" . $config['cache']['prefix'] . "." . $config['cache']['extension']);
                     }
                 }
             }
@@ -404,21 +413,21 @@
                 
                 if(isset($name))
                 {
-                    unlink($config['cache']['directory'] . "/{$name}." . $config['cache']['extension']);
-                    unlink($config['cache']['directory'] . "/{$name}" . $config['cache']['prefix'] . "." . $config['cache']['extension']);
+                    @unlink($config['cache']['directory'] . "/{$name}." . $config['cache']['extension']);
+                    @unlink($config['cache']['directory'] . "/{$name}" . $config['cache']['prefix'] . "." . $config['cache']['extension']);
                 }
                 
              }
             return;
         }
 
-        public function restore($keys = null)
+        public function restore($keys = null, $updateAll = false)
         {
             global $config;
             
             if(empty($keys) || $keys == null)
             {
-                foreach($this->asarray('/(.*)/') as $cachekey)
+                foreach($this->asarray() as $cachekey)
                 {
                     if(file_exists($config['cache']['directory'] . '/' . $cachekey . '.' . $config['cache']['extension']) && !$this->exists($cachekey))
                     {
@@ -431,11 +440,24 @@
                 return true;
             }
             
-            if(file_exists($config['cache']['directory'] . '/' . $keys . '.' . $config['cache']['extension']) && !$this->exists($keys))
+            if(file_exists($config['cache']['directory'] . '/' . $keys . '.' . $config['cache']['extension']))
             {
-                if($this->make_zero($keys))
+                if(!! $updateAll === false)
                 {
-                    return true;
+                    if(!$this->exists($keys))
+                    {
+                        if($this->make_zero($keys))
+                        {
+                            return true;
+                        }
+                        return false;
+                    }
+                } else {
+                    if($this->make_zero($keys))
+                    {
+                        return true;
+                    }
+                    return false;
                 }
                 return false;
             }

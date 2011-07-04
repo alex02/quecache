@@ -81,11 +81,7 @@ We've saved 3 cache files (some1, some2, some3) and we want to merge them with
 all_persons.The we return by number.Starts from 0 (like arrays) and we want to get some2.
 </p>
 Result: <?= $cache->get_merge('all_persons', 1); ?>
-<h3>Saving with arrays</h3>
-<p>
-** Note **<br />
-This is one of the most important functions in Que Cache.Separating content in one cache file.
-</p>
+<h3>Serializing cache</h3>
 <?php
 
 $array = array(
