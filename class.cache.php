@@ -29,7 +29,7 @@
          *
          */
         
-        public function exists($key, $dir = null)  
+        public function exists($key, $dir = null)
         {
             global $config;
             
@@ -48,6 +48,24 @@
                 return false;
             }
             return false;  
+        }
+        
+        public function expired($key, $listAny = false)
+        {
+            if(!! $listAny === true)
+            {
+                if($this->get_time($key, true) >= time())
+                {
+                    return true;
+                }
+                return false;
+            }
+            
+            if($this->get_time($key) >= time())
+            {
+                return true;
+            }
+            return false;
         }
         
         public function put($key, $value, $time = '', $dir = null)
@@ -83,7 +101,7 @@
         {
             global $config;
             
-            if($this->exists($key) || (bool) $any === true)
+            if($this->exists($key) || !! $any === true)
             {
                 switch($mode)
                 {
@@ -124,13 +142,13 @@
             return false;
         }
         
-        public function get($key, $dir = null) 
+        public function get($key, $getAny = false, $dir = null) 
         {
             global $config;
             
             $directory = ($dir !== null) ? $dir : $config['cache']['directory'];
             
-            if($this->exists($key, $directory))
+            if($this->exists($key, $directory) || !! $getAny === true)
             {
                 $cache_output = @file_get_contents($directory . "/{$key}." . $config['cache']['extension']);
                 $cache_output = str_replace($config['cache']['default'], '', $cache_output);
@@ -156,18 +174,33 @@
             return;
         }
         
-        public function destroy($key, $del_zero = 0, $dir = null)
+        public function destroy($key, $del_zero = false, $prefix = '', $dir = null)
         {
-           global $config;
+            global $config;
            
-           $directory = ($dir !== null) ? $dir : $config['cache']['directory'];
+            $directory = ($dir !== null) ? $dir : $config['cache']['directory'];
            
-           if($this->exists($key, $dir))
+            if($prefix == '' || $prefix == null || $prefix == false)
             {
-                if($this->get_time($key) !== 0 || ($this->get_time($key) == 0 && (bool) $del_zero === true))
+                if($this->exists($key, $dir))
                 {
-                    @unlink($directory . "/{$key}." . $config['cache']['extension']);
-                    @unlink($directory . "/{$key}" . $config['cache']['prefix'] . "." . $config['cache']['extension']);
+                   if($this->get_time($key) !== 0 || ($this->get_time($key) == 0 && !! $del_zero === true))
+                   {
+                       @unlink($directory . "/{$key}." . $config['cache']['extension']);
+                       @unlink($directory . "/{$key}" . $config['cache']['prefix'] . "." . $config['cache']['extension']);
+                   }
+                   return true;
+                }
+                return false;
+            } else {
+                foreach($this->asarray($prefix, ((!! $del_zero === true) ? true : false)) as $keyName)
+                {
+                    if($this->get_time($keyName) !== 0 || ($this->get_time($keyName) == 0 && !! $del_zero === true))
+                    {
+                        @unlink($directory . "/{$keyName}." . $config['cache']['extension']);
+                        @unlink($directory . "/{$keyName}" . $config['cache']['prefix'] . "." . $config['cache']['extension']);
+                        continue;
+                    }
                 }
                 return true;
             }
@@ -244,18 +277,13 @@
             return;
         }
         
-        public function alter($key, $value)
+        public function alter($key, $value, $alterAny = false)
         {
             global $config;
             
-            if($this->exists($key))
+            if($this->update($key, $this->get($key) . $value, 'key', ((!! $alterAny === true) ? true : false)))
             {
-                
-                if($this->update($key, $this->get($key) . $value, 'key'))
-                {
-                    return true;
-                }
-                return false;
+                return true;
             }
             return false;
         }
@@ -354,11 +382,13 @@
                 if(isset($name) && !preg_match('/' . $config['cache']['extension'] . '/', $name))
                 {
                     unset($name);
+                    continue;
                 }
                 
                 if(isset($name) && preg_match('/' . $config['cache']['prefix'] . "." . $config['cache']['extension'] . '/', $name))
                 {
                     unset($name);
+                    continue;
                 }
                 
                 if(isset($name))
@@ -369,6 +399,7 @@
                 if(empty($name))
                 {
                     unset($name);
+                    continue;
                 }
                 
                 if(isset($name))
@@ -383,7 +414,7 @@
             return; 
         }
         
-        public function remove_all()
+        public function removeAll()
         {
             global $config;
             
@@ -394,11 +425,13 @@
                 if(!preg_match('/' . $config['cache']['extension'] . '/', $name))
                 {
                     unset($name);
+                    continue;
                 }
                 
                 if(isset($name) && preg_match('/' . $config['cache']['prefix'] . "." . $config['cache']['extension'] . '/', $name))
                 {
                     unset($name);
+                    continue;
                 }
                 
                 if(isset($name))
@@ -409,6 +442,7 @@
                 if(empty($name))
                 {
                     unset($name);
+                    continue;
                 }
                 
                 if(isset($name))
