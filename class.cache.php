@@ -260,7 +260,7 @@
             return false;
         }
         
-        public function asarray($expr = '/(.*)/')
+        public function asarray($expr = '/(.*)/', $listAll = false)
         {
             global $config;
            
@@ -304,7 +304,7 @@
                     unset($asarry[$i]);
                 }
                 
-                if(!$this->exists($asarry[$i]))
+                if(!$this->exists($asarry[$i]) && !! $listAll === false)
                 {
                     unset($asarry[$i]);
                 }
