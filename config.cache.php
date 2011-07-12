@@ -9,7 +9,7 @@ if(!is_array($config))
 $config['cache']['directory'] = 'cache/';
 $config['cache'][0] = 'cache/';
 $config['cache']['time'] = 31556926;
-$config['cache']['prefix'] = '_time';
+$config['cache']['prefix'] = '.time';
 $config['cache']['merge'] = '_merged';
 $config['cache']['default'] = '<?php /* QueCache */ exit; ?>';
 $config['cache']['delim'] = '--#--';

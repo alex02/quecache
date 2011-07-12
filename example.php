@@ -107,7 +107,7 @@ $cache->put('SomeCache', 'Content', 3600);
 
 ?>
 Cache 'SomeCache' should expire at <?= date('d.m.Y g:i', $cache->get_time('SomeCache')); ?> (after one hour)
-<h3>Update and alter</h3>
+<h3>Update</h3>
 <?php
 
 $cache->put('Time', 'OK', 3600);
@@ -116,11 +116,6 @@ echo "<br />";
 // Update timing to + one hour
 $cache->update('Time', 7200, 'time');
 echo "After: " . date('g:i', $cache->get_time('Time'));
-echo "<br /><hr />";
-echo "Before: " . $cache->get('Time');
-echo "<br />";
-$cache->alter('Time', '_NEW'); // Append _NEW to OK, OK_NEW
-echo "After: " . $cache->get('Time');
 
 ?>
 <h3>As array</h3>
