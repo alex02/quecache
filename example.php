@@ -2,17 +2,16 @@
 
 /**
  * Que Cache
- * @version 2.0
+ * @version 2.1
  */
 
-include('config.cache.php');
 include('class.cache.php');
 $cache = new QueCache();
 
 // Store content in cache
 // For one hour
 $cache->put('welcome', 'Hello world', 3600);
-// Store info for the default cache time in class_cache.php
+// Store info for the default cache time in class.cache.php
 // By default its 1 year.
 $cache->put('COOKIE_PATH', './tmp/cookies/');
 // Store in some easy for unsterstand way, see strtotime at php.net
@@ -41,12 +40,12 @@ zeroed cache files.
 
 $cache->put('store1', 'is here!');
 echo 'Added: ' . $cache->get('store1') . "<br />";
-$cache->make_zero('store1');
+$cache->makezero('store1');
 echo 'Zeroed: ' . $cache->get('store1') . "<br />";
 $cache->destroy('store1');
 echo 'Deleted (default): ' . $cache->get('store1') . "<br />";
 $cache->destroy('store1', true);
-echo 'Deleted (extended): ' . $cache->get('store1') . "<br />";
+echo 'Deleted (extended): ' . $cache->get('store1') . "(null)<br />";
 
 ?>
 <h3>Exists or not &amp; PHP source</h3>
@@ -54,7 +53,6 @@ echo 'Deleted (extended): ' . $cache->get('store1') . "<br />";
 
 // This example shows the cache exists function and
 // Shows that saving in php file a php source won't conflict with result.
-// Also the _time end prefix for cache won't conflict with names.
 
 $cache->put('Some_CacheFOO_file_cache_time', '<?php echo "ok"; ?>');
 
@@ -71,8 +69,11 @@ if($cache->exists('Some_CacheFOO_file_cache_time'))
 $cache->put('some1', 'Person #1');
 $cache->put('some2', 'Person #2');
 $cache->put('some3', 'Person #3');
+$cache->put('some4', 'Person #4', 3600, 'cache/core/');
 
 $cache->merge('all_persons', array('some1', 'some2', 'some3'));
+
+echo $cache->getmerge('all_persons', 2);
 
 ?>
 <p>
@@ -80,7 +81,7 @@ $cache->merge('all_persons', array('some1', 'some2', 'some3'));
 We've saved 3 cache files (some1, some2, some3) and we want to merge them with
 all_persons.The we return by number.Starts from 0 (like arrays) and we want to get some2.
 </p>
-Result: <?= $cache->get_merge('all_persons', 1); ?>
+Result: <?= $cache->getmerge('all_persons', 1); ?>
 <h3>Serializing cache</h3>
 <?php
 
@@ -106,16 +107,17 @@ IP: <?= $results['ip']; ?>
 $cache->put('SomeCache', 'Content', 3600);
 
 ?>
-Cache 'SomeCache' should expire at <?= date('d.m.Y g:i', $cache->get_time('SomeCache')); ?> (after one hour)
+Cache 'SomeCache' should expire at <?= date('d.m.Y g:i', $cache->gettime('SomeCache')); ?> (after one hour)
 <h3>Update</h3>
 <?php
 
 $cache->put('Time', 'OK', 3600);
-echo "Before: " . date('g:i', $cache->get_time('Time'));
+echo "Before: " . date('g:i', $cache->gettime('Time'));
 echo "<br />";
-// Update timing to + one hour
-$cache->update('Time', 7200, 'time');
-echo "After: " . date('g:i', $cache->get_time('Time'));
+// Update timing to + one hour 2x
+// If the 4th parameter is false the time won't be appended to the older and the time should be + one hour
+$cache->update('Time', 3600, 'time', true);
+echo "After: " . date('g:i', $cache->gettime('Time'));
 
 ?>
 <h3>As array</h3>
@@ -124,5 +126,5 @@ echo "After: " . date('g:i', $cache->get_time('Time'));
 Return array of cache keys with specific keywords or regex.
 </p>
 <pre>
-<?php print_r($cache->asarray('some')); ?>
+<?php print_r($cache->asarray('some')); $cache->removeall(); ?>
 </pre>
