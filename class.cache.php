@@ -13,52 +13,48 @@
 
 class QueCache
 {
-    public $options = array();
+    public $options;
     
     function __construct($atts = null)
     {
         $this->options = array(
-            'cache_dir'   =>    'cache/',
-            'cache_time'    =>    31556926,
-            'cache_extension'   =>    substr(strrchr(__FILE__, "."), 1),
-            'cache_default'   =>    '<?php /* QueCache */ exit; ?>',
-            'cache_merge'   =>    '_merged',
-            'cache_delim'   =>    '--#--',
-            'newline'   =>    PHP_EOL,
+            'cache_dir'       =>  'cache/',
+            'cache_time'      =>  60*60*24*365,
+            'cache_extension' =>  substr(strrchr(__FILE__, "."), 1),
+            'cache_default'   =>  '<?php /* QueCache */ exit; ?>',
+            'newline'         =>  PHP_EOL,
         );
         
-        if( is_array($atts) )
+        if( isset($atts) && is_array($atts) )
         {
             $this->options = array_merge($this->options, $atts);
         }
         
-        $this->options['cache_slash'] =  ($this->options['cache_dir'][strlen($this->options['cache_dir'])-1] == '/') ? '' : '/';
+        $this->options['cache_slash'] = ($this->options['cache_dir'][strlen($this->options['cache_dir'])-1] == '/') ? '' : '/';
     }
+    
     /*
-     * Checks if cache exists
-     * by key name and/or dir
+     * Checks if cache exists by key name and/or dir
      *
-     * $param string $val
-     * $param string $dir
+     * $param string $key The cache key name to check
+     * $param string $dir The directory where the cache should be
      *
      * @return boolean
      *
      */
-    
     public function exists($key, $directory = null)
     {
         $dir = (is_dir($directory)) ? $directory : $this->options['cache_dir'];
         $this->options['cache_slash'] = $this->dir2slash($dir);
         
-        if(file_exists($dir . "{$this->options['cache_slash']}{$key}." . $this->options['cache_extension']))  
+        if(file_exists($dir . $this->options['cache_slash'] . $key . '.' . $this->options['cache_extension']))  
         {
-            $output = file_get_contents($dir . "{$this->options['cache_slash']}{$key}." . $this->options['cache_extension']);
+            $output = file_get_contents($dir . $this->options['cache_slash'] . $key . '.' . $this->options['cache_extension']);
             $output = str_replace($this->options['cache_default'], '', $output);
             $output = preg_replace('/[^0-9]+/', '', $output);
             $output = substr($output, 0, 10);
             
-            $this->options['cache_slash'] =  $this->dir2slash(null);
-            if((integer) $output >= time() || $output == 0)
+            if((integer) $output >= time())
             {
                 return true;
             }
@@ -68,37 +64,14 @@ class QueCache
     }
     
     /*
-     * Checks if the cache
-     * is expired
+     * Stores value into cache
      *
-     * @param string $key
-     * @param boolean $listAny
-     *
-     * @return boolean
-     *
-     */
-    
-    public function expire($key, $directory = null)
-    {
-        if($this->put($key, $this->get($key), -time()+1, $directory))
-        {
-            return true;
-        }
-        
-        return false;
-    }
-    
-    /*
-     * Stores value
-     * into cache
-     *
-     * @param string $key
-     * @param string $value
-     * @param string|integer $time
-     * @param string $dir
+     * @param string $key The cache key
+     * @param string $value The cache value
+     * @param string|integer $time The cache time
+     * @param string $directory The cache directory where to store cache
      *
      */
-    
     public function put($key, $value, $time = '', $directory = null)
     {
         $dir = ($directory) ? $directory : $this->options['cache_dir'];
@@ -106,20 +79,68 @@ class QueCache
         
         if(!is_dir($dir))
         {
-            @mkdir($dir, 0770);
+            @mkdir($dir, 0770, true);
         }
         
-        $time = (!empty($time)) ? $time : $this->options['cache_time'];
-        $time = (!is_int($time)) ? strtotime($time)-time() : $time;
+        $time = (empty($time)) ? $this->options['cache_time'] : $time;
+        $time = (is_int($time)) ? $time : strtotime($time)-time();
         $time = time()+$time;
+        
+        // Regex to match all chunked arrays
+        // Match {} as well
+        preg_match_all('/[\[|\{]([a-zA-Z0-9_"\']+)?[\]|\}]{1,}/', $key, $keys, PREG_PATTERN_ORDER);
+        unset($keys[0]);
+        
+        if(preg_match('/^\b(.+)\b[\[|\{]([a-zA-Z0-9_"\']+)?[\]|\}]/', $key, $chunks))
+        {
+            $chunks = array_map(array(&$this, 'clean_name'), $chunks);
+            $key =& $chunks[1];
+            $this_array = (is_array(unserialize($this->get($key)))) ? unserialize($this->get($key)) : array();
+            
+            if(isset($chunks[2]))
+            {
+                $subkeys = $keys[1];
+                $subkeys = array_map(array(&$this, 'clean_name'), $subkeys);
+                
+                if(empty($subkeys[sizeof($subkeys)-1]))
+                {
+                    $filtered_subkeys = $subkeys;
+                    array_pop($filtered_subkeys);
+                    
+                    if(is_array($this_array) && isset($this_array[$subkeys[0]]))
+                    {
+                        $subchunk_key = $this->format_array($this_array, $filtered_subkeys);
+                    } else {
+                        $subchunk_key = array();
+                    }
+                    
+                    $value = array_merge_recursive($subchunk_key, array($value));
+                } else {
+                    $value = array($subkeys[sizeof($subkeys)-1] => $value);
+                }
+                
+                for($i = sizeof($subkeys)-2;$i >= 0;$i--)
+                {
+                    $value = array($subkeys[$i] => $value);
+                }
+            } else {
+                $value = array_merge($this_array, array($value));
+            }
+            
+            if(is_array($this_array))
+            {
+                $value =& serialize($this->parse_arrays($this_array, $value));
+            } else {
+                $value =& serialize($value);
+            }
+        }
 
         $prepared_value = <<<QCS
 {$this->options['cache_default']}
 $time{$this->options['newline']}$value
 QCS;
-
-        $this->options['cache_slash'] =  $this->dir2slash(null);
-        if(@file_put_contents($dir . "{$this->options['cache_slash']}{$key}." . $this->options['cache_extension'], $prepared_value))
+        
+        if(@file_put_contents($dir . $this->options['cache_slash'] . $key . '.' . $this->options['cache_extension'], $prepared_value))
         {
             return true;
         }
@@ -135,23 +156,22 @@ QCS;
      * and stay with the same timing
      * and vice versa
      *
-     * @param string $key
-     * @param string $value
-     * @param string $mode (key|name|time|timing)
-     * @param boolean $appendNew
-     * @param string $directory
-     * @param boolean $any
+     * @param string $key The cache key
+     * @param string $value The cache value
+     * @param string $mode (key|name|time|timing) Update method
+     * @param boolean $appendNew Should the value be appended to the old one or not (useful for time)
+     * @param string $directory Where the cache should be
+     * @param boolean $any Should any cache files be updated (expired or not)
      *
      * @return boolean
      *
      */
-    
-    public function update($key, $value, $mode = 'key', $appendNew = false, $directory = null, $any = false)
+    public function update($key, $value, $mode = 'key', $appendNew = false, $directory = null)
     {
         $dir = (is_dir($directory)) ? $directory : $this->options['cache_dir'];
         $this->options['cache_slash'] = $this->dir2slash($dir);
         
-        if($this->exists($key) || !! $any === true)
+        if($this->exists($key))
         {
             switch($mode)
             {
@@ -159,10 +179,10 @@ QCS;
                 case 'name':
                 case 'key':
        
-                $prepared_value = @file_get_contents($dir . "{$this->options['cache_slash']}{$key}." . $this->options['cache_extension']);
+                $prepared_value = @file_get_contents($dir . $this->options['cache_slash'] . $key . '.' . $this->options['cache_extension']);
                 $prepared_value = str_replace($this->options['cache_default'] . $this->options['newline'], '', $prepared_value);
                 $prepared_value = preg_replace('/[^0-9]+/', '', $prepared_value, 1);
-                $prepared_value = substr($prepared_value, 0, 10);
+                $prepared_value = (integer) substr($prepared_value, 0, 10);
                 
                 if(!! $appendNew === true)
                 {
@@ -174,12 +194,10 @@ QCS;
 {$prepared_value}{$this->options['newline']}{$value}
 QCS;
            
-                if(@file_put_contents($dir . "{$this->options['cache_slash']}{$key}." . $this->options['cache_extension'], $prepared_value))
+                if(@file_put_contents($dir . $this->options['cache_slash'] . $key . '.' . $this->options['cache_extension'], $prepared_value))
                 {
-                    $this->options['cache_slash'] =  $this->dir2slash(null);
                     return true;
                 } else {
-                    $this->options['cache_slash'] =  $this->dir2slash(null);
                     return false;
                 }
          
@@ -188,8 +206,8 @@ QCS;
                 case 'time':
                 case 'timing':
                 
-                $value = (!empty($value)) ? $value : $this->options['cache_time'];
-                $value = (!is_int($value)) ? strtotime($value)-time() : $value;
+                $value = (empty($value)) ? $this->options['cache_time'] : $value;
+                $value = (is_int($value)) ? $value : strtotime($value)-time();
                 $value = time()+$value;
                 
                 if(!! $appendNew === true)
@@ -206,21 +224,17 @@ QCS;
 {$this->options['cache_default']}
 {$value}{$this->options['newline']}{$prepared_value}
 QCS;
-                if(@file_put_contents($dir . "{$this->options['cache_slash']}{$key}" . "." . $this->options['cache_extension'], $prepared_value))
+                if(@file_put_contents($dir . $this->options['cache_slash'] . $key . '.' . $this->options['cache_extension'], $prepared_value))
                 {
-                    $this->options['cache_slash'] =  $this->dir2slash(null);
                     return true;
                 } else {
-                    $this->options['cache_slash'] =  $this->dir2slash(null);
                     return false;
                 }
                 
                 break;
             }
-            $this->options['cache_slash'] =  $this->dir2slash(null);
             return false;
         }
-        $this->options['cache_slash'] =  $this->dir2slash(null);
         return false;
     }
     
@@ -234,20 +248,33 @@ QCS;
      * @return string
      *
      */
-    
-    public function get($key, $getAny = false, $directory = null) 
+    public function get($key, $directory = null) 
     {
         $dir = (is_dir($directory)) ? $directory : $this->options['cache_dir'];
         $this->options['cache_slash'] = $this->dir2slash($dir);
         
-        if($this->exists($key, $dir) || !! $getAny === true)
+        // Regex to match all chunked arrays
+        preg_match_all('/\[([a-zA-Z0-9_"\']+)?\]/', $key, $keys, PREG_PATTERN_ORDER);
+        
+        if(preg_match('/^\b(.+)\b\[([a-zA-Z0-9_"\']+)?\]/', $key, $chunks))
+        {
+            $key =& $this->clean_name($chunks[1]);
+            $keys = array_map(array(&$this, 'clean_name'), $keys);
+        }
+        
+        if($this->exists($key, $dir))
         {
             $cache_output = @file_get_contents($dir . "{$this->options['cache_slash']}{$key}." . $this->options['cache_extension']);
             $cache_output = str_replace($this->options['cache_default'], '', $cache_output);
-            $cache_output = preg_replace('/(' . $this->options['newline'] . '[0-9]+' . $this->options['newline'] . ')/', '', $cache_output, 1);
+            $cache_output = preg_replace('/(\s[0-9]+\s)(\s)?/', '', $cache_output, 1);
             
-            $this->options['cache_slash'] =  $this->dir2slash(null);
-            return $cache_output;
+            if( sizeof($chunks) )
+            {
+                $cache_output = unserialize($cache_output);
+                return $this->format_array($cache_output, $keys[1], false);
+            } else {
+                return $cache_output;
+            }
         }
         return;
     }
@@ -260,27 +287,34 @@ QCS;
      *
      * @return integer
      *
-     */
+     */    
     
     public function gettime($key, $directory = null)
     {
         $dir = (is_dir($directory)) ? $directory : $this->options['cache_dir'];
         $this->options['cache_slash'] = $this->dir2slash($dir);
         
+        if(preg_match('/^\b(.+)\b\[([a-zA-Z0-9_"\']+)?\]/', $key, $chunks))
+        {
+            $key =& $this->clean_name($chunks[1]);
+            unset($chunks);
+        }
+        
         if($this->exists($key, $dir))
         {
-            $cache_output_time = @file_get_contents($dir . "{$this->options['cache_slash']}{$key}" . "." . $this->options['cache_extension']);
-            $cache_output_time = str_replace($this->options['cache_default'], '', $cache_output_time);
-            $cache_output_time = preg_replace('/[^' . $this->options['newline'] . '[0-9]+' . $this->options['newline'] . ']/', '', $cache_output_time, 1);
+            $output = @file_get_contents($dir . $this->options['cache_slash'] . $key . "." . $this->options['cache_extension']);
+            $output = str_replace($this->options['cache_default'], '', $output);
+            $output = preg_replace('/[^0-9]/', '', $output);
+            $output = substr($output, 0, 10);
             
-            $this->options['cache_slash'] =  $this->dir2slash(null);
-            return (integer) $cache_output_time;
+            return (integer) $output;
         }
         return;
     }
     
     /*
-     * Destroy single or specific caches
+     * Destroy single cache
+     * This function deletes the file
      *
      * @param string $key
      * @param boolean $del_zero
@@ -290,147 +324,31 @@ QCS;
      * @return boolean
      *
      */
-    
-    public function destroy($key, $del_zero = false, $prefix = '', $directory = null)
+    public function destroy($key, $directory = null)
     {
         $dir = (is_dir($directory)) ? $directory : $this->options['cache_dir'];
         $this->options['cache_slash'] = $this->dir2slash($dir);
-       
-        if($prefix == '' || $prefix == null || $prefix == false)
+        
+        if($this->exists($key, $dir))
         {
-            if($this->exists($key, $dir))
-            {
-               if($this->gettime($key) !== 0 || ($this->gettime($key) == 0 && !! $del_zero === true))
-               {
-                   @unlink($dir . "{$this->options['cache_slash']}{$key}." . $this->options['cache_extension']);
-               }
-               $this->options['cache_slash'] =  $this->dir2slash(null);
-               return true;
+            if(file_exists($dir . $this->options['cache_slash'] . $key . '.' . $this->options['cache_extension'])) {
+                @unlink($dir . $this->options['cache_slash'] . $key . '.' . $this->options['cache_extension']);
+                return true;
             }
-            $this->options['cache_slash'] =  $this->dir2slash(null);
             return false;
-        } else {
-            foreach($this->asarray($prefix, $dir, ((!! $del_zero === true) ? true : false)) as $keyName)
-            {
-                if($this->gettime($keyName) !== 0 || ($this->gettime($keyName) == 0 && !! $del_zero === true))
-                {
-                    @unlink($dir . "{$this->options['cache_slash']}{$keyName}." . $this->options['cache_extension']);
-                    continue;
-                }
-            }
-            $this->options['cache_slash'] =  $this->dir2slash(null);
-            return true;
-        }
-        $this->options['cache_slash'] =  $this->dir2slash(null);
-        return false;
-    }
-    
-    /*
-     * Makes cache with
-     * zero time.Can't
-     * be deleted by default
-     *
-     * @param string $key
-     * @param string $directory
-     *
-     * @return boolean
-     *
-     */
-    
-    public function makezero($key, $directory = null)
-    {
-        $dir = (is_dir($directory)) ? $directory : $this->options['cache_dir'];
-        $this->options['cache_slash'] = $this->dir2slash($dir);
-        
-        if($this->put($key, $this->get($key), -time(), $dir))
-        {
-            $this->options['cache_slash'] =  $this->dir2slash(null);
-            return true;
-        }
-        $this->options['cache_slash'] =  $this->dir2slash(null);
-        return false;
-    }
-    
-    /*
-     * Merge several caches
-     * into one via array
-     *
-     * @param string $merge_key
-     * @param array $ary
-     * @param string|integer $time
-     *
-     * @return boolean
-     *
-     */
-    
-    public function merge($merge_key, $ary, $time = '')
-    {
-        $array = array();
-        $array_merge = array();
-     
-        foreach($ary as $num => $name)
-        {
-            if($this->exists($name))
-            {
-                $array[$num] = $this->get($ary[$num]);
-                $array_imp = implode($this->options['newline'], $array);
-          
-                $array_merge[$num] = $this->get($ary[$num]);
-                $array_imp_merge = implode($this->options['cache_delim'], $array_merge);
-            }
-        }
-        
-        if($this->put($merge_key . $this->options['cache_merge'], $array_imp_merge, $time))
-        {
-            return true;
         }
         return false;
     }
     
     /*
-     * Returns merged part
-     * of cache via array
+     * Return array with key names by keyword/s or regex
      *
-     * @param string $key
-     * @param integer $start
-     *
-     * @return string
-     *
-     */
-    
-    public function getmerge($key, $start = null)
-    {
-        if($this->exists($key))
-        {
-        
-            if(preg_match('/' . $this->options['cache_delim'] . '/', $this->get($key . $this->options['cache_merge'])))
-            {
-            
-                if($start === null)
-                {
-                    return $this->get($key . $this->options['cache_merge']);
-                }
-           
-                $merge = preg_split('/' . $this->options['cache_delim'] . '/', $this->get($key . $this->options['cache_merge']));
-       
-                return $merge[$start];
-            }
-            return;
-        }
-        return;
-    }
-    
-    /*
-     * Return array with key names
-     * by keyword/s or regex
-     *
-     * @param string|integer $expr
-     * @param boolean $listAll
+     * @param mixed $expr The regular expression or keyword
+     * @param string $directory The cache directory where the cache should be
      *
      * @return array
      *
      */
-    
     public function asarray($expr = '/(.*)/', $directory = null, $listAll = false)
     {
         $i = 0;
@@ -440,7 +358,9 @@ QCS;
 
         foreach(scandir($dir, 1) as $name)
         {
-            if($name == '.' || $name == '..') continue;
+            if($name == '.' || $name == '..') {
+                continue;
+            }
             
             if(is_dir($dir . $name))
             {
@@ -490,42 +410,7 @@ QCS;
             }
         }
         
-        $this->options['cache_slash'] =  $this->dir2slash(null);
-        return (array) $asarry;
-    }
-    
-    /*
-     * Insert multiple caches
-     * by array
-     *
-     * @param array $array
-     *
-     * @return boolean
-     *
-     */
-    
-    public function multiput($array)
-    {
-        if(!is_array($array))
-        {
-            return false;
-        }
-        
-        foreach($array as $key => $content)
-        {
-            if(is_array($content))
-            {
-                if($this->put($key, $content[0], $content[1]))
-                {
-                    continue;
-                }
-            }
-            elseif($this->put($key, $content))
-            {
-                continue;
-            }
-        }
-        return true;
+        return $asarry;
     }
     
     /*
@@ -536,7 +421,6 @@ QCS;
      * @return boolean
      *
      */
-    
     public function purge($directory = null)
     {
         $dir = (is_dir($directory)) ? $directory : $this->options['cache_dir'];
@@ -544,15 +428,17 @@ QCS;
 
         foreach(scandir($dir, 1) as $name)
         {
-            if($name == '.' || $name == '..') continue;
-            
-            if(is_dir($dir . $name))
-            {
-                $this->removeall($dir . $name . $this->options['cache_slash']);
+            if($name == '.' || $name == '..') {
                 continue;
             }
             
-            if(isset($name) && !preg_match('/' . $this->options['cache_extension'] . $this->options['cache_slash'], $name))
+            if(is_dir($dir . $name))
+            {
+                $this->purge($dir . $name . $this->options['cache_slash']);
+                continue;
+            }
+            
+            if(isset($name) && !preg_match('/' . $this->options['cache_extension'] . '/', $name))
             {
                 unset($name);
                 continue;
@@ -571,13 +457,14 @@ QCS;
             
             if(isset($name))
             {
-                if(!$this->exists($name, $dir) && $this->gettime($name, $dir) !== 0)
+                if(!$this->exists($name, $dir))
                 {
-                    @unlink($dir . "{$this->options['cache_slash']}{$name}." . $this->options['cache_extension']);
+                    if(file_exists($dir . $this->options['cache_slash'] . $name . '.' . $this->options['cache_extension'])) {
+                        @unlink($dir . $this->options['cache_slash'] . $name . '.' . $this->options['cache_extension']);
+                    }
                 }
             }
         }
-        $this->options['cache_slash'] =  $this->dir2slash(null);
         return true; 
     }
     
@@ -590,7 +477,6 @@ QCS;
      * @return boolean
      *
      */
-    
     public function removeall($directory = null)
     {
         $dir = (is_dir($directory)) ? $directory : $this->options['cache_dir'];
@@ -598,7 +484,9 @@ QCS;
         
         foreach(scandir($dir, 1) as $name)
         {
-            if($name == '.' || $name == '..') continue;
+            if($name == '.' || $name == '..') {
+                continue;
+            }
             
             if(is_dir($dir . $name))
             {
@@ -606,7 +494,7 @@ QCS;
                 continue;
             }
             
-            if(!preg_match('/' . $this->options['cache_extension'] . $this->options['cache_slash'], $name))
+            if(isset($name) && !preg_match('/' . $this->options['cache_extension'] . '/', $name))
             {
                 unset($name);
                 continue;
@@ -625,79 +513,16 @@ QCS;
             
             if(isset($name))
             {
-                @unlink($dir . "{$this->options['cache_slash']}{$name}." . $this->options['cache_extension']);
+                if(file_exists($dir . $this->options['cache_slash'] . $name . '.' . $this->options['cache_extension'])) {
+                    @unlink($dir . $this->options['cache_slash'] . $name . '.' . $this->options['cache_extension']);
+                }
             }
         }
-        $this->options['cache_slash'] =  $this->dir2slash(null);
         return true;
     }
     
     /*
-     * Restores expired cache
-     *
-     * @param string $keys
-     * @param boolean $updateAll
-     * @param string $directory
-     *
-     * @return boolean
-     *
-     */
-    
-    public function restore($keys = null, $updateAll = false, $directory = null)
-    {
-        $dir = (is_dir($directory)) ? $directory : $this->options['cache_dir'];
-        $this->options['cache_slash'] = $this->dir2slash($dir);
-        
-        if(empty($keys) || $keys == null)
-        {
-            foreach($this->asarray(null, $dir, (!! $updateAll === true) ? true : false) as $cachekey)
-            {
-                if(file_exists(((is_dir($directory)) ? $this->options['cache_dir'] . $directory : $this->options['cache_dir']) . $this->options['cache_slash'] . $cachekey . '.' . $this->options['cache_extension']) && !$this->exists($cachekey))
-                {
-                    if($this->makezero($cachekey, $dir))
-                    {
-                        continue;
-                    }
-                }
-            }
-            $this->options['cache_slash'] =  $this->dir2slash(null);
-            return true;
-        }
-        
-        if(file_exists($dir . $this->options['cache_slash'] . $keys . '.' . $this->options['cache_extension']))
-        {
-            if(!! $updateAll === false)
-            {
-                if(!$this->exists($keys, $dir))
-                {
-                    if($this->makezero($keys, $dir))
-                    {
-                        $this->options['cache_slash'] =  $this->dir2slash(null);
-                        return true;
-                    }
-                    $this->options['cache_slash'] =  $this->dir2slash(null);
-                    return false;
-                }
-            } else {
-                if($this->makezero($keys, $dir))
-                {
-                    $this->options['cache_slash'] =  $this->dir2slash(null);
-                    return true;
-                }
-                $this->options['cache_slash'] =  $this->dir2slash(null);
-                return false;
-            }
-            $this->options['cache_slash'] =  $this->dir2slash(null);
-            return false;
-        }
-        $this->options['cache_slash'] =  $this->dir2slash(null);
-        return false;
-    }
-    
-    /*
-     * Simple private function
-     * to find out if the directory
-     * needs a slash at its end
+     * Simple private function to find out if the directory needs a slash at its end
      *
      * @param string $dir
      *
@@ -706,11 +531,71 @@ QCS;
      */
     private function dir2slash($dir = null)
     {
-        if($dir)
+        if( isset($dir) )
         {
             return ( $dir[strlen($dir)-1] == '/' ) ? '' : '/';
         } else {
             return ( $this->options['cache_dir'][strlen($this->options['cache_dir'])-1] == '/' ) ? '' : '/';
+        }
+    }
+    
+    /*
+     * Simple private function to clean special symbols from cache keys
+     *
+     * @param string $str
+     *
+     * @return string
+     */
+    private function clean_name($str)
+    {
+        return preg_replace('/\W+/', '', $str);
+    }
+    
+    /*
+     * Private function to merge two arrays in correct way and return them both
+     *
+     * @param array $array The base array
+     * @param array $subarray The array that has to be appended in the base array
+     *
+     * @return array
+     */
+    private function parse_arrays(&$array, $subarray)
+    {
+        foreach($subarray as $key => $value)
+        {
+            if( isset($array[$key]) )
+            { 
+                if( is_array($array[$key]) && is_array($value) )
+                {
+                    $this->parse_arrays($array[$key], $value);
+                    continue;
+                }
+            }
+            $array[$key] = $value;
+        }
+
+        return $array;
+    }
+    
+    /*
+     * Private function to format an array to call the current key
+     *
+     * @param array $base The base array
+     * @param array $indexes The base indexes to match
+     *
+     */
+    private function format_array($base, $indexes, $asarray = true)
+    {
+        foreach( $indexes as $key ) {
+            if(isset($base[$key])) {
+                $base = $base[$key];
+            }
+        }
+        
+        if(!! $asarray === true) {
+            return (is_array($base)) ? $base : array();
+        } else {
+            return $base;
         }
     }
 }

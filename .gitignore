@@ -1,0 +1,7 @@
+cache/*
+cache/!index.html
+cache/!.htaccess
+
+examples/cache/*
+examples/cache/!index.html
+examples/cache/!.htaccess
