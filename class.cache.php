@@ -30,7 +30,7 @@ class QueCache
             $this->options = array_merge($this->options, $atts);
         }
         
-        $this->options['cache_slash'] = ($this->options['cache_dir'][strlen($this->options['cache_dir'])-1] == '/') ? '' : '/';
+        $this->options['cache_slash'] = $this->dir2slash(null);
     }
     
     /*
@@ -161,7 +161,6 @@ QCS;
      * @param string $mode (key|name|time|timing) Update method
      * @param boolean $appendNew Should the value be appended to the old one or not (useful for time)
      * @param string $directory Where the cache should be
-     * @param boolean $any Should any cache files be updated (expired or not)
      *
      * @return boolean
      *
@@ -531,7 +530,7 @@ QCS;
      */
     private function dir2slash($dir = null)
     {
-        if( isset($dir) )
+        if( $dir )
         {
             return ( $dir[strlen($dir)-1] == '/' ) ? '' : '/';
         } else {
