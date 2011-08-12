@@ -1,12 +1,12 @@
-==Que Cache==
+## Que Cache
 Que Cache is simple, powerful and secure caching system written in PHP
 www.quecache.org
 
-== Requires ==
+## Requires
 
 PHP version >= 5
 
-== License ==
+## License
 
 Dual licenses
 GNU GPL license http://www.gnu.org/licenses/gpl.html
